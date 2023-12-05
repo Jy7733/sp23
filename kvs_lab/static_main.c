@@ -1,5 +1,6 @@
 #include "kvs.h"
 
+
 int main()
 {
 	kvs_t* kvs = kvs_open();
@@ -9,9 +10,7 @@ int main()
 		return -1;
 	}
 
-	// FILE* file = fopen("cluster004.trc","r");
-	FILE* file = fopen("cluster000.trc","r");
-	// FILE* snpFile = fopen("kvs.img","w");
+	FILE* file = fopen("cluster004.trc","r");
 
 	int line_size = 1024;
 	char* line = malloc(line_size * sizeof(char));
@@ -39,23 +38,19 @@ int main()
 
 		if(strcmp(cmd,"set")==0) {
 			set(kvs,k,v);
-			do_snapshot(kvs);
-			// do_cust_snpshot(kvs);
+			 //snapshot 
+			// do_snapshot(kvs);
+			do_cust_snpshot(kvs);
 		}
 		else if(strcmp(cmd,"get")==0) {
 			get(kvs,k);
 		}
 	}
-	// do_snapshot(kvs);
-	// do_cust_snpshot(kvs);
-	printf("kvs items : %d",kvs->items);
+	printf("kvs items : %d\n",kvs->items);
 
 	free(line);
 	free(v);
 	fclose(file);
-	// fclose(snpFile);
 	kvs_close(kvs);
-	
-
 	return 0;
 }
