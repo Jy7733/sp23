@@ -5,6 +5,10 @@ int set(kvs_t* kvs, const char* key, const char* value)
 	// printf("set: %s, %s\n", key, value);
 
 	/* do program here */
+	if (is_recovery){
+		return 0;
+	}
+
 	node_t* newNode = (node_t*)malloc(sizeof(node_t));
 	if (!newNode) {
 		fprintf(stderr,"set failed\n");
