@@ -1,6 +1,5 @@
 #include "kvs.h"
 
-
 kvs_t* kvs_open()
 {
 	kvs_t* kvs = (kvs_t*) malloc (sizeof(kvs_t));
@@ -10,9 +9,8 @@ kvs_t* kvs_open()
 		kvs->db=NULL;
 	}
 	
-	is_recovery = 1;
-	do_recovery(kvs);
-	is_recovery = 0;
+	// do_recovery(kvs);
+	do_cust_recovery(kvs);
 
 	printf("kvs_item : %d\n", kvs->items);
 	return kvs;
