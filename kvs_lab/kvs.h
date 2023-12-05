@@ -17,6 +17,7 @@ struct kvs{
 }; 
 typedef struct kvs kvs_t; 
 
+extern int is_recovery;
 
 
 kvs_t* kvs_open();
