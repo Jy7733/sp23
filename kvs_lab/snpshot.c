@@ -1,16 +1,20 @@
 #include "kvs.h"
-#include <fcntl.h>
 #include <unistd.h>
+#include <fcntl.h>
+
 
 #define BUFFER_SIZE 256
 
-int recovery = 0;
+int is_recovery = 0;
 
 //baseline 버전 (fscanf, fprintf 사용 )
 void do_snapshot(kvs_t* kvs)
 {
     FILE* snpFile = fopen("kvs.img","a");
     node_t* current = kvs->db;
+    if (current->key ==NULL){
+        return;
+    }
     fprintf(snpFile,"%s,%s\n",current->key,current->value);
     fclose(snpFile);
 }
@@ -39,62 +43,45 @@ void do_recovery(kvs_t *kvs) {
 
         value = (char *)malloc(value_size + 1);
         ret = fscanf(snpFile,"%[^\n]",value);
-        // printf("key : %s\n value : %s\n",key,value);
         if (ret == EOF) break;
 
-        set(kvs,key,value);
+        node_t* newNode = (node_t*)malloc(sizeof(node_t));
+        strcpy(newNode->key,key);
+        newNode->value = strdup(value);
+        newNode->next = kvs->db;
+        kvs->items++;
+
         free(value);
         i++;
+        
     }
-
+    is_recovery = 1;
     fclose(snpFile);
 }
 
 void do_cust_snpshot(kvs_t* kvs) {
-    int fd = open("./kvs.img",O_WRONLY|O_CREAT,0644);
+    int fd = open("kvs.img",O_WRONLY|O_APPEND|O_CREAT,0644);
     if (fd<0){
         perror("file open error");
         exit(1);
     }
 
     node_t* current = kvs->db;
-    // // printf("value len : %ld\n",strlen((char*)current->value));
-    char buffer[512];
-    int len = 0;
-    int written = 0;
-
-    // while(current!=NULL) {
-    len += sprintf(buffer + len, "%s,",current->key);
-    // printf("len : %d\n",len);
-    char* value_part = current->value;
-    while (strlen(value_part) >0) {
-    //     //buffer+len 위치 부터 buffersize - len -1 까지 길이 저장 
-        int part_len = sprintf(buffer+len,"%.*s",BUFFER_SIZE - len - 1,value_part);
-        value_part += part_len;
-        len += part_len;
-
-        if (len >=BUFFER_SIZE-1 || strlen(value_part)==0) {
-            written = write(fd,buffer,len);
-            // printf("written : %d\n",written);
-            if (written!=len) {
-                perror("wirte error 111");
-                exit(1);
-            }
-            len = 0;
-            }
-        }
-    written = write(fd,"\n",1);
-    if (written!=1){
-        perror("write error 222");
+    if (current->key == NULL){
+        return;
     }
-    close(fd); 
+    write(fd,current->key,strlen(current->key));
+    write(fd,",",1);
+    write(fd,current->value,strlen(current->value));
+    write(fd,"\n",1);
+    close(fd);
  }
     
 void do_cust_recovery(kvs_t* kvs){
-    int fd = open("kvs.img",O_RDONLY|O_CREAT,0644);
+    int fd = open("kvs.img",O_RDONLY);
     if (fd<0){
         perror("file open error");
-        exit(1);
+        return;
     }
 
     int buffer_size = 1024;
@@ -115,15 +102,20 @@ void do_cust_recovery(kvs_t* kvs){
                 buffer_size *= 2;
                 buffer = realloc(buffer, buffer_size * sizeof(char));
             }
+        
 
             if(strlen(buffer) > v_size ) {
                 v_size = strlen(buffer) + 1;
-                v = realloc(v, v_size * sizeof(char));
+                v = realloc(v, v_size * sizeof(char));   
             }
 
             sscanf(buffer,"%[^,],%[^\n]",k,v);
-            set(kvs,k,v);
-            // printf("key : %s\n, value : %s\n",k,v);
+            node_t* newNode = (node_t*)malloc(sizeof(node_t));
+            strcpy(newNode->key,k);
+            newNode->value = strdup(v);
+            newNode->next = kvs->db;
+            kvs->items++;
+
             i=0; 
             continue;
         }
@@ -132,6 +124,6 @@ void do_cust_recovery(kvs_t* kvs){
     }
     free(buffer);
     free(v);
-
     close(fd);
+    is_recovery = 1;
 }
